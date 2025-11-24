@@ -1,1 +1,162 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxwiCEtLd3TOZz8p-rY2iNlVXu8lgFWkDDw37m2nKSsGjyhImKhJjDKzbNl3_2mMFYs/exec'; // <-- MODIFIEZ MOI
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actions Dividendes - Rente Passive</title>
+    <style>
+        /* Styles CSS pour l'esthétique du tableau */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        #dividend-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #dividend-table th, #dividend-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        #dividend-table th {
+            background-color: #3498db;
+            color: white;
+            cursor: pointer; /* Pour le tri */
+        }
+        #dividend-table tr:hover {
+            background-color: #ecf0f1;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📊 Actions à Dividendes pour Rente Passive</h1>
+        <p>Données mises à jour depuis votre feuille Google Sheets.</p>
+        
+        <div id="loading-message" class="loading">Chargement des données...</div>
+
+        <table id="dividend-table">
+            <thead>
+                <tr>
+                    <th data-column="ticker">TICKET 🔼</th>
+                    <th data-column="nom">Société</th>
+                    <th data-column="secteur">Secteur</th>
+                    <th data-column="cours">Cours USD</th>
+                    <th data-column="rendement">Rendement %</th>
+                    <th data-column="dividende">Dividende USD</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Le code JavaScript pour récupérer et afficher les données
+        
+        // ATTENTION : REMPLACEZ CETTE CHAÎNE PAR L'URL DE VOTRE APPLICATION WEB GOOGLE SCRIPT
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz0ezTUoxREg2tuycIe5kkBZaWB4e7eRFxVIqJDlwwYiYdNAecOuS_Rm0ld2yWuiFGifw/exec'; // <-- MODIFIEZ MOI
+
+        let currentData = [];
+        let sortColumn = 'ticker';
+        let sortDirection = 1; // 1 pour ASC (croissant), -1 pour DESC (décroissant)
+
+        // Fonction principale pour récupérer les données du script
+        async function fetchDividendData() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                currentData = await response.json();
+                renderTable(); // Affiche et trie le tableau initial
+                document.getElementById('loading-message').style.display = 'none'; // Cache le message de chargement
+            } catch (error) {
+                console.error("Erreur lors de la récupération des données :", error);
+                document.getElementById('loading-message').textContent = "Erreur de chargement. Vérifiez l'URL de l'API.";
+            }
+        }
+
+        // Fonction pour trier les données
+        function sortData() {
+            currentData.sort((a, b) => {
+                const valA = a[sortColumn];
+                const valB = b[sortColumn];
+
+                if (typeof valA === 'string') {
+                    return valA.localeCompare(valB) * sortDirection;
+                }
+                return (valA - valB) * sortDirection;
+            });
+        }
+
+        // Fonction pour dessiner le tableau dans le HTML
+        function renderTable() {
+            sortData(); // Trie les données avant l'affichage
+            const tbody = document.getElementById('dividend-table').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = ''; // Vide le tableau existant
+
+            currentData.forEach(item => {
+                const row = tbody.insertRow();
+                
+                row.insertCell().textContent = item.ticker;
+                row.insertCell().textContent = item.nom;
+                row.insertCell().textContent = item.secteur;
+                
+                // Formatage des nombres
+                row.insertCell().textContent = item.cours.toFixed(2) + ' $';
+                row.insertCell().textContent = (item.rendement * 100).toFixed(2) + ' %';
+                row.insertCell().textContent = item.dividende.toFixed(2) + ' $';
+            });
+
+            // Met à jour les flèches de tri
+            document.querySelectorAll('#dividend-table th').forEach(th => {
+                const column = th.getAttribute('data-column');
+                let symbol = '';
+                if (column === sortColumn) {
+                    symbol = sortDirection === 1 ? ' 🔼' : ' 🔽';
+                }
+                th.textContent = th.textContent.replace(/ [▲▼].*/, '') + symbol;
+            });
+        }
+
+        // Gestionnaire d'événements pour le tri par colonne
+        document.getElementById('dividend-table').querySelectorAll('th').forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.getAttribute('data-column');
+                if (column === sortColumn) {
+                    sortDirection *= -1; // Inverse la direction
+                } else {
+                    sortColumn = column;
+                    sortDirection = 1; // Trie par défaut en croissant sur la nouvelle colonne
+                }
+                renderTable();
+            });
+        });
+
+        // Lance le chargement des données au démarrage
+        fetchDividendData();
+    </script>
+</body>
+</html>
